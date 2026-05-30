@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍌 Banana Clicker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#1a1a0f;--bg2:#252512;--bg3:#2e2e18;--panel:#1f1f10;
+  --border:#3a3a1a;--yellow:#f5c518;--yellow2:#e8a800;--yellow3:#ffdf60;
+  --orange:#e87c12;--green:#5fb843;--red:#e85555;
+  --text:#f0e8c0;--text2:#b0a870;--text3:#6a6440;
+  --gold:#ffd700;--shadow:rgba(245,197,24,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── OVERLAY SCREENS ── */
+.screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;}
+.screen.hidden{display:none;}
+.auth-box{background:var(--bg3);border:2px solid var(--yellow2);border-radius:24px;padding:44px 52px;text-align:center;max-width:420px;width:90%;box-shadow:0 0 60px rgba(245,197,24,0.2);}
+.auth-box .big-icon{font-size:72px;line-height:1;margin-bottom:10px;animation:wiggle 2s infinite;}
+.auth-box h1{font-family:'Fredoka One',sans-serif;font-size:36px;color:var(--yellow);margin-bottom:4px;}
+.auth-box .subtitle{color:var(--text2);font-size:13px;margin-bottom:28px;}
+.auth-box input{width:100%;background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;color:var(--text);outline:none;transition:border-color 0.2s;margin-bottom:10px;text-align:center;}
+.auth-box input:focus{border-color:var(--yellow);}
+.auth-box input::placeholder{color:var(--text3);font-weight:400;}
+.btn-primary{width:100%;background:var(--yellow);color:#1a1a0f;border:none;border-radius:10px;padding:13px;font-family:'Fredoka One',sans-serif;font-size:18px;cursor:pointer;transition:all 0.15s;margin-top:4px;}
+.btn-primary:hover{background:var(--yellow3);transform:translateY(-1px);}
+.btn-primary:active{transform:scale(0.98);}
+.btn-secondary{width:100%;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:10px;padding:10px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;margin-top:8px;}
+.btn-secondary:hover{border-color:var(--yellow2);color:var(--yellow);}
+.auth-error{color:var(--red);font-size:12px;margin-top:8px;min-height:16px;}
+.auth-switch{color:var(--text3);font-size:13px;margin-top:16px;}
+.auth-switch a{color:var(--yellow2);cursor:pointer;text-decoration:underline;}
+
+/* ── MAIN LAYOUT ── */
+#gameScreen{display:flex;min-height:100vh;}
+#gameScreen.hidden{display:none;}
+
+/* LEFT */
+.panel-left{width:230px;min-width:230px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px 10px;gap:6px;overflow-y:auto;max-height:100vh;position:sticky;top:0;}
+.panel-left::-webkit-scrollbar{width:3px;}
+.panel-left::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.panel-section-title{font-family:'Fredoka One',sans-serif;font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;padding:6px 8px 2px;}
+.upgrade-btn{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 10px;cursor:pointer;transition:all 0.15s;text-align:left;display:flex;align-items:center;gap:8px;width:100%;position:relative;}
+.upgrade-btn:hover:not(:disabled){border-color:var(--yellow2);background:var(--bg2);transform:translateX(2px);}
+.upgrade-btn:disabled{opacity:0.4;cursor:default;}
+.upgrade-btn .ub-icon{font-size:24px;line-height:1;flex-shrink:0;}
+.upgrade-btn .ub-info{flex:1;min-width:0;}
+.upgrade-btn .ub-name{font-weight:700;font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upgrade-btn .ub-desc{font-size:10px;color:var(--text2);}
+.upgrade-btn .ub-cost{font-family:'Fredoka One',sans-serif;font-size:11px;color:var(--yellow);}
+.upgrade-btn .ub-count{position:absolute;top:4px;right:6px;background:var(--yellow2);color:#1a1a0f;border-radius:20px;font-size:9px;font-weight:800;padding:1px 5px;}
+
+/* Bulk buy selector */
+.bulk-bar{display:flex;gap:4px;padding:4px 0 2px;}
+.bulk-btn{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:4px 2px;font-family:'Fredoka One',sans-serif;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.1s;text-align:center;}
+.bulk-btn.active{background:var(--yellow2);color:#1a1a0f;border-color:var(--yellow2);}
+.bulk-btn:hover:not(.active){border-color:var(--yellow);color:var(--yellow);}
+
+/* Player info top-left */
+.player-info{display:flex;align-items:center;gap:8px;padding:10px 8px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);margin-bottom:4px;}
+.player-avatar{width:32px;height:32px;border-radius:50%;background:rgba(245,197,24,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--yellow2);}
+.player-name-display{font-weight:700;font-size:13px;color:var(--yellow3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:2px;transition:color 0.15s;}
+.logout-btn:hover{color:var(--red);}
+
+/* CENTER */
+.panel-center{flex:1;display:flex;flex-direction:column;align-items:center;padding:28px 20px;background:var(--bg);position:relative;overflow:hidden;}
+.stats-bar{width:100%;max-width:460px;display:flex;gap:10px;margin-bottom:16px;}
+.stat-card{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;text-align:center;}
+.stat-card .sc-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+.stat-card .sc-val{font-family:'Fredoka One',sans-serif;font-size:17px;color:var(--yellow);margin-top:1px;}
+.banana-counter{font-family:'Fredoka One',sans-serif;font-size:48px;color:var(--yellow);text-shadow:0 0 30px var(--shadow);margin-bottom:2px;transition:transform 0.08s;text-align:center;}
+.banana-counter.bump{transform:scale(1.06);}
+.bps-display{font-size:13px;color:var(--text2);margin-bottom:24px;}
+.click-area{position:relative;width:200px;height:200px;cursor:pointer;user-select:none;margin-bottom:24px;}
+.monkey-main{font-size:138px;line-height:200px;text-align:center;display:block;transition:transform 0.08s;filter:drop-shadow(0 8px 24px rgba(245,197,24,0.3));}
+.click-area:active .monkey-main{transform:scale(0.91) rotate(-5deg);}
+.click-area:hover .monkey-main{transform:scale(1.05);}
+.float-text{position:absolute;pointer-events:none;font-family:'Fredoka One',sans-serif;font-size:20px;color:var(--yellow3);text-shadow:0 2px 8px rgba(0,0,0,0.6);animation:floatUp 1s ease-out forwards;z-index:50;white-space:nowrap;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-75px) scale(0.7);}}
+.milestone-bar{width:100%;max-width:460px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+.milestone-bar .mb-label{font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;}
+.milestone-bar .mb-track{height:7px;background:var(--bg2);border-radius:4px;overflow:hidden;}
+.milestone-bar .mb-fill{height:100%;background:linear-gradient(90deg,var(--yellow2),var(--yellow3));border-radius:4px;transition:width 0.3s ease;}
+.milestone-bar .mb-text{font-size:11px;color:var(--text2);margin-top:5px;display:flex;justify-content:space-between;}
+
+/* RIGHT - Leaderboard */
+.panel-right{width:255px;min-width:255px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;max-height:100vh;position:sticky;top:0;}
+.leaderboard-header{padding:16px 14px 10px;border-bottom:1px solid var(--border);}
+.leaderboard-header h2{font-family:'Fredoka One',sans-serif;font-size:19px;color:var(--yellow);display:flex;align-items:center;gap:7px;}
+.leaderboard-header .lb-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+.leaderboard-list{flex:1;overflow-y:auto;padding:6px;}
+.leaderboard-list::-webkit-scrollbar{width:3px;}
+.leaderboard-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.lb-entry{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;margin-bottom:3px;transition:background 0.15s;}
+.lb-entry:hover{background:var(--bg3);}
+.lb-entry.is-me{background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);}
+.lb-rank{font-family:'Fredoka One',sans-serif;font-size:13px;width:22px;text-align:center;flex-shrink:0;color:var(--text3);}
+.lb-rank.gold{color:#ffd700;}
+.lb-rank.silver{color:#c0c0c0;}
+.lb-rank.bronze{color:#cd7f32;}
+.lb-avatar{width:28px;height:28px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--border);}
+.lb-entry.is-me .lb-avatar{border-color:var(--yellow2);background:rgba(245,197,24,0.1);}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-weight:700;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-entry.is-me .lb-name{color:var(--yellow3);}
+.lb-bananas{font-size:10px;color:var(--text2);}
+.lb-score{font-family:'Fredoka One',sans-serif;font-size:12px;color:var(--yellow);text-align:right;flex-shrink:0;}
+.my-position{padding:10px 14px;border-top:1px solid var(--border);background:rgba(245,197,24,0.04);}
+.my-position .mp-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+.my-position .mp-val{font-family:'Fredoka One',sans-serif;font-size:15px;color:var(--yellow);margin-top:1px;}
+.my-position .mp-sub{font-size:10px;color:var(--text2);}
+
+/* ── ADMIN PANEL ── */
+#adminScreen{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;display:flex;align-items:center;justify-content:center;}
+#adminScreen.hidden{display:none;}
+.admin-box{background:#0f0f0a;border:2px solid #e85555;border-radius:20px;padding:32px 36px;max-width:520px;width:94%;max-height:90vh;overflow-y:auto;}
+.admin-box h2{font-family:'Fredoka One',sans-serif;font-size:26px;color:#e85555;margin-bottom:4px;}
+.admin-box .admin-sub{font-size:12px;color:var(--text3);margin-bottom:24px;}
+.admin-section{margin-bottom:20px;}
+.admin-section h3{font-family:'Fredoka One',sans-serif;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #2a2a14;}
+.admin-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.admin-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'Nunito',sans-serif;font-size:14px;color:var(--text);outline:none;}
+.admin-input:focus{border-color:var(--yellow);}
+.btn-admin-red{background:#e85555;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-family:'Fredoka One',sans-serif;font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.btn-admin-red:hover{background:#ff6666;}
+.btn-admin-yellow{background:var(--yellow2);color:#1a1a0f;border:none;border-radius:8px;padding:9px 14px;font-family:'Fredoka One',sans-serif;font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.btn-admin-yellow:hover{background:var(--yellow3);}
+.btn-admin-green{background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-family:'Fredoka One',sans-serif;font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.btn-admin-green:hover{background:#72d053;}
+.admin-msg{font-size:12px;color:var(--green);margin-top:6px;min-height:16px;}
+.admin-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;}
+.admin-close:hover{color:var(--red);}
+.admin-pin-box{background:var(--bg3);border:2px solid #e85555;border-radius:18px;padding:32px 40px;text-align:center;max-width:360px;width:90%;}
+.admin-pin-box h2{font-family:'Fredoka One',sans-serif;font-size:24px;color:#e85555;margin-bottom:16px;}
+
+/* ── MISC ── */
+.notif{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--yellow2);color:#1a1a0f;border-radius:10px;padding:9px 18px;font-weight:700;font-size:13px;transition:transform 0.3s ease;z-index:999;white-space:nowrap;pointer-events:none;}
+.notif.show{transform:translateX(-50%) translateY(0);}
+.achievement-popup{position:fixed;top:18px;right:18px;background:var(--bg3);border:1px solid var(--yellow2);border-radius:13px;padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:900;transform:translateX(400px);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);max-width:260px;}
+.achievement-popup.show{transform:translateX(0);}
+.achievement-popup .ap-icon{font-size:28px;}
+.achievement-popup .ap-title{font-family:'Fredoka One',sans-serif;font-size:10px;color:var(--yellow2);text-transform:uppercase;letter-spacing:1px;}
+.achievement-popup .ap-name{font-weight:700;font-size:14px;color:var(--text);}
+.admin-trigger{position:fixed;bottom:16px;right:16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text3);cursor:pointer;transition:all 0.15s;z-index:100;}
+.admin-trigger:hover{border-color:#e85555;color:#e85555;}
+@keyframes wiggle{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+
+/* BANNED */
+.banned-box{background:var(--bg3);border:2px solid var(--red);border-radius:20px;padding:40px;text-align:center;max-width:380px;width:90%;}
+.banned-box .banned-icon{font-size:64px;margin-bottom:12px;}
+.banned-box h2{font-family:'Fredoka One',sans-serif;font-size:28px;color:var(--red);margin-bottom:8px;}
+.banned-box p{color:var(--text2);font-size:14px;}
+
+@media(max-width:900px){.panel-left{width:190px;min-width:190px;}.panel-right{width:210px;min-width:210px;}}
+@media(max-width:680px){#gameScreen{flex-direction:column;}.panel-left,.panel-right{width:100%;min-width:0;max-height:none;position:static;}.panel-left{flex-direction:row;flex-wrap:wrap;padding:8px;}.upgrade-btn{width:calc(50% - 4px);}}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="screen">
+  <div class="auth-box">
+    <div class="big-icon">🐵</div>
+    <h1>Banana Clicker</h1>
+    <p class="subtitle">Melde dich an oder erstelle einen Account</p>
+    <input type="text" id="authName" placeholder="Benutzername..." maxlength="20" autocomplete="off">
+    <input type="password" id="authPass" placeholder="Passwort..." maxlength="40">
+    <button class="btn-primary" onclick="doLogin()">Anmelden 🍌</button>
+    <button class="btn-secondary" onclick="doRegister()">Neuen Account erstellen</button>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<!-- BANNED SCREEN -->
+<div id="bannedScreen" class="screen hidden">
+  <div class="banned-box">
+    <div class="banned-icon">🚫</div>
+    <h2>Gesperrt!</h2>
+    <p>Dein Account wurde vom Admin gesperrt.<br>Du kannst nicht mehr spielen.</p>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen" class="hidden">
+  <div class="panel-left" id="upgradePanel">
+    <div class="player-info">
+      <div class="player-avatar">🐵</div>
+      <div class="player-name-display" id="playerNameDisplay">–</div>
+      <button class="logout-btn" onclick="doLogout()" title="Abmelden">↩</button>
+    </div>
+    <div class="panel-section-title">Menge</div>
+    <div class="bulk-bar">
+      <button class="bulk-btn active" data-bulk="1" onclick="setBulk(1)">×1</button>
+      <button class="bulk-btn" data-bulk="5" onclick="setBulk(5)">×5</button>
+      <button class="bulk-btn" data-bulk="10" onclick="setBulk(10)">×10</button>
+      <button class="bulk-btn" data-bulk="50" onclick="setBulk(50)">×50</button>
+    </div>
+    <div class="panel-section-title">Upgrades</div>
+  </div>
+
+  <div class="panel-center">
+    <div class="stats-bar">
+      <div class="stat-card"><div class="sc-label">Gesamt</div><div class="sc-val" id="totalDisplay">0</div></div>
+      <div class="stat-card"><div class="sc-label">Pro Klick</div><div class="sc-val" id="perClickDisplay">1</div></div>
+      <div class="stat-card"><div class="sc-label">Pro Sek.</div><div class="sc-val" id="bpsDisplay">0</div></div>
+    </div>
+    <div class="banana-counter" id="bananaCount">0 🍌</div>
+    <div class="bps-display" id="bpsLine">0 Bananen pro Sekunde</div>
+    <div class="click-area" id="clickArea" onclick="handleClick(event)">
+      <span class="monkey-main">🐵</span>
+    </div>
+    <div class="milestone-bar">
+      <div class="mb-label">Nächstes Ziel</div>
+      <div class="mb-track"><div class="mb-fill" id="mileFill" style="width:0%"></div></div>
+      <div class="mb-text"><span id="mileLabel">0 / 100 🍌</span><span id="milePercent">0%</span></div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="leaderboard-header">
+      <h2>🏆 Rangliste</h2>
+      <div class="lb-sub" id="lbLastUpdate">Wird geladen...</div>
+    </div>
+    <div class="leaderboard-list" id="leaderboardList">
+      <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Lade...</div>
+    </div>
+    <div class="my-position">
+      <div class="mp-label">Deine Position</div>
+      <div class="mp-val" id="myRankDisplay">#–</div>
+      <div class="mp-sub" id="myRankSub">–</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN TRIGGER -->
+<button class="admin-trigger" id="adminTrigger" onclick="openAdminPrompt()" style="display:none;">⚙ Panel</button>
+
+<!-- ADMIN PIN SCREEN -->
+<div id="adminPinScreen" class="screen hidden">
+  <div class="admin-pin-box">
+    <h2>🔐 Admin Panel</h2>
+    <input type="password" id="adminPinInput" placeholder="PIN eingeben..." style="width:100%;background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;color:var(--text);outline:none;text-align:center;margin-bottom:10px;" maxlength="30">
+    <button class="btn-primary" onclick="checkAdminPin()">Einloggen</button>
+    <button class="btn-secondary" onclick="closeAdminPin()">Abbrechen</button>
+    <div class="auth-error" id="adminPinError"></div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminScreen" class="hidden">
+  <div class="admin-box" style="position:relative;">
+    <button class="admin-close" onclick="closeAdmin()">✕</button>
+    <h2>⚙ Admin Panel</h2>
+    <div class="admin-sub">Banana Clicker — Moderations-Tools</div>
+
+    <div class="admin-section">
+      <h3>🚫 Spieler bannen</h3>
+      <div class="admin-row">
+        <input type="text" class="admin-input" id="banUsername" placeholder="Benutzername...">
+        <button class="btn-admin-red" onclick="adminBan()">Bannen</button>
+      </div>
+      <div class="admin-msg" id="banMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>✅ Bann aufheben</h3>
+      <div class="admin-row">
+        <input type="text" class="admin-input" id="unbanUsername" placeholder="Benutzername...">
+        <button class="btn-admin-green" onclick="adminUnban()">Entbannen</button>
+      </div>
+      <div class="admin-msg" id="unbanMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>🍌 Bananen geben</h3>
+      <div class="admin-row">
+        <input type="text" class="admin-input" id="giveUsername" placeholder="Benutzername...">
+        <input type="number" class="admin-input" id="giveAmount" placeholder="Menge..." style="max-width:120px;">
+        <button class="btn-admin-yellow" onclick="adminGiveBananas()">Geben</button>
+      </div>
+      <button class="btn-admin-yellow" style="width:100%;margin-top:4px;" onclick="adminGiveInfinite()">💛 Mir unendlich Bananen geben</button>
+      <div class="admin-msg" id="giveMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>🗑 Spieler von Rangliste entfernen</h3>
+      <div class="admin-row">
+        <input type="text" class="admin-input" id="removeUsername" placeholder="Benutzername...">
+        <button class="btn-admin-red" onclick="adminRemoveFromLB()">Entfernen</button>
+      </div>
+      <div class="admin-msg" id="removeMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>🔄 Spieler zurücksetzen</h3>
+      <div class="admin-row">
+        <input type="text" class="admin-input" id="resetUsername" placeholder="Benutzername...">
+        <button class="btn-admin-red" onclick="adminReset()">Reset</button>
+      </div>
+      <div class="admin-msg" id="resetMsg"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>📋 Alle Spieler</h3>
+      <button class="btn-admin-yellow" style="width:100%;" onclick="adminListPlayers()">Spielerliste laden</button>
+      <div id="playerListOutput" style="margin-top:10px;font-size:12px;color:var(--text2);max-height:160px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- ACHIEVEMENT POPUP -->
+<div class="achievement-popup" id="achievePopup">
+  <div class="ap-icon" id="achieveIcon">🏅</div>
+  <div><div class="ap-title">Erfolg freigeschaltet!</div><div class="ap-name" id="achieveName">–</div></div>
+</div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────
+const SUPA_URL = 'https://fjwvqycpqxxvfsqsvfah.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqd3ZxeWNwcXh4dmZzcXN2ZmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwOTc5ODEsImV4cCI6MjA5NTY3Mzk4MX0.-aiRt5LT6I_P9lZf2wzQbcQYIbHBI5G56jnYk_rapas';
+const ADMIN_PIN = 'rodka88';
+const ADMIN_NAME = 'panel';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+// ── STATE ─────────────────────────────────────────────────────────
+let bananas = 0, totalBananas = 0, perClick = 1, bps = 0;
+let playerName = '', playerId = null;
+let upgradeCounts = {};
+let earnedAchievements = new Set();
+let bulkAmount = 1;
+let gameStarted = false;
+let lastTick = Date.now();
+let saveTimer = null;
+
+// ── UPGRADES ─────────────────────────────────────────────────────
+const UPGRADES = [
+  {id:'cursor',   name:'Klick-Cursor',    icon:'👆', desc:'+1 pro Klick',          baseCost:15,     clickBonus:1, bpsBonus:0},
+  {id:'monkeypal',name:'Affen-Freund',    icon:'🐒', desc:'+0.5/Sek',              baseCost:100,    clickBonus:0, bpsBonus:0.5},
+  {id:'tree',     name:'Bananenbaum',     icon:'🌴', desc:'+2/Sek',                baseCost:500,    clickBonus:0, bpsBonus:2},
+  {id:'basket',   name:'Bananenkorb',     icon:'🧺', desc:'+1 Klick +1/Sek',       baseCost:800,    clickBonus:1, bpsBonus:1},
+  {id:'jungle',   name:'Dschungel',       icon:'🌿', desc:'+1 Klick +5/Sek',       baseCost:1200,   clickBonus:1, bpsBonus:5},
+  {id:'plantation',name:'Plantage',       icon:'🏝', desc:'+15/Sek',               baseCost:4000,   clickBonus:0, bpsBonus:15},
+  {id:'gorilla',  name:'Gorilla Chef',    icon:'🦍', desc:'+5 pro Klick',          baseCost:10000,  clickBonus:5, bpsBonus:0},
+  {id:'factory',  name:'Banana-Fabrik',   icon:'🏭', desc:'+60/Sek',               baseCost:30000,  clickBonus:0, bpsBonus:60},
+  {id:'rocket',   name:'Bananen-Rakete',  icon:'🚀', desc:'+10 Klick +50/Sek',     baseCost:75000,  clickBonus:10, bpsBonus:50},
+  {id:'lab',      name:'Banana-Labor',    icon:'🔬', desc:'+10 Klick +200/Sek',    baseCost:100000, clickBonus:10, bpsBonus:200},
+  {id:'temple',   name:'Affentempel',     icon:'🛕', desc:'+30 Klick +500/Sek',    baseCost:350000, clickBonus:30, bpsBonus:500},
+  {id:'portal',   name:'Banana-Portal',   icon:'🌀', desc:'+1000/Sek',             baseCost:500000, clickBonus:0, bpsBonus:1000},
+  {id:'universe', name:'Bananeniversum',  icon:'🌌', desc:'+50 Klick +5000/Sek',   baseCost:2000000,clickBonus:50,bpsBonus:5000},
+];
+UPGRADES.forEach(u => upgradeCounts[u.id] = 0);
+
+const MILESTONES = [100,500,1000,5000,10000,50000,100000,500000,1000000,5000000,10000000];
+const ACHIEVEMENTS = [
+  {id:'first', name:'Erste Banane!',       icon:'🍌', req:t=>t>=1},
+  {id:'m100',  name:'100 Bananen!',        icon:'🎉', req:t=>t>=100},
+  {id:'m1k',   name:'1.000 Bananen!',      icon:'🏅', req:t=>t>=1000},
+  {id:'m10k',  name:'10.000 Bananen!',     icon:'🥇', req:t=>t>=10000},
+  {id:'m100k', name:'100.000 Bananen!',    icon:'👑', req:t=>t>=100000},
+  {id:'m1m',   name:'1 Million Bananen!',  icon:'💎', req:t=>t>=1000000},
+  {id:'upg1',  name:'Erstes Upgrade!',     icon:'⬆️', req:()=>Object.values(upgradeCounts).some(v=>v>0)},
+  {id:'upg10', name:'10 Upgrades!',        icon:'🔝', req:()=>Object.values(upgradeCounts).reduce((a,b)=>a+b,0)>=10},
+];
+
+// ── FORMAT ────────────────────────────────────────────────────────
+function fmt(n){
+  n=Math.floor(n);
+  if(n>=1e12)return(n/1e12).toFixed(2)+' Bio.';
+  if(n>=1e9)return(n/1e9).toFixed(2)+' Mrd.';
+  if(n>=1e6)return(n/1e6).toFixed(2)+' Mio.';
+  if(n>=1000)return n.toLocaleString('de-DE');
+  return n.toString();
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── AUTH ──────────────────────────────────────────────────────────
+document.getElementById('authName').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('authPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+async function doLogin(){
+  const name=document.getElementById('authName').value.trim();
+  const pass=document.getElementById('authPass').value.trim();
+  const err=document.getElementById('authError');
+  if(!name||!pass){err.textContent='Bitte Name und Passwort eingeben.';return;}
+  err.textContent='Wird überprüft...';
+  const {data,error}=await db.from('players').select('*').eq('username',name).single();
+  if(error||!data){err.textContent='Benutzer nicht gefunden. Account erstellen?';return;}
+  if(data.password!==pass){err.textContent='Falsches Passwort!';return;}
+  if(data.is_banned){showBanned();return;}
+  loadPlayerData(data);
+  showGame();
+}
+
+async function doRegister(){
+  const name=document.getElementById('authName').value.trim();
+  const pass=document.getElementById('authPass').value.trim();
+  const err=document.getElementById('authError');
+  if(!name){err.textContent='Bitte Namen eingeben.';return;}
+  if(name.length<2){err.textContent='Name muss mind. 2 Zeichen haben.';return;}
+  if(!pass){err.textContent='Bitte Passwort eingeben.';return;}
+  if(pass.length<3){err.textContent='Passwort muss mind. 3 Zeichen haben.';return;}
+  err.textContent='Wird registriert...';
+  const {data:existing}=await db.from('players').select('id').eq('username',name).single();
+  if(existing){err.textContent='Name bereits vergeben!';return;}
+  const {data,error}=await db.from('players').insert({username:name,password:pass,bananas:0,total_bananas:0,per_click:1,bps:0,upgrade_counts:{}}).select().single();
+  if(error){err.textContent='Fehler: '+error.message;return;}
+  loadPlayerData(data);
+  showGame();
+  showNotif('✅ Account erstellt! Willkommen, '+name+'!');
+}
+
+function doLogout(){
+  gameStarted=false;
+  bananas=0;totalBananas=0;perClick=1;bps=0;playerName='';playerId=null;
+  UPGRADES.forEach(u=>upgradeCounts[u.id]=0);
+  earnedAchievements=new Set();
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('adminTrigger').style.display='none';
+  document.getElementById('authError').textContent='';
+}
+
+function loadPlayerData(data){
+  playerId=data.id;
+  playerName=data.username;
+  bananas=data.bananas||0;
+  totalBananas=data.total_bananas||0;
+  perClick=data.per_click||1;
+  bps=data.bps||0;
+  const uc=data.upgrade_counts||{};
+  UPGRADES.forEach(u=>upgradeCounts[u.id]=uc[u.id]||0);
+  earnedAchievements=new Set(data.earned_achievements||[]);
+}
+
+function showBanned(){
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('bannedScreen').classList.remove('hidden');
+}
+
+function showGame(){
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  document.getElementById('playerNameDisplay').textContent=playerName;
+  document.getElementById('adminTrigger').style.display='block';
+  recalcStats();
+  renderUpgrades();
+  updateUI();
+  checkAchievements();
+  lastTick=Date.now();
+  gameStarted=true;
+  requestAnimationFrame(gameTick);
+  refreshLeaderboard();
+  setInterval(refreshLeaderboard,8000);
+  setInterval(saveToDb,15000);
+}
+
+// ── GAME LOGIC ────────────────────────────────────────────────────
+function setBulk(n){
+  bulkAmount=n;
+  document.querySelectorAll('.bulk-btn').forEach(b=>{
+    b.classList.toggle('active',parseInt(b.dataset.bulk)===n);
+  });
+  renderUpgrades();
+}
+
+function upgradeCost(u,count){
+  return Math.floor(u.baseCost*Math.pow(1.15,count));
+}
+
+function bulkCost(u){
+  let total=0,c=upgradeCounts[u.id]||0;
+  for(let i=0;i<bulkAmount;i++)total+=upgradeCost(u,c+i);
+  return total;
+}
+
+function recalcStats(){
+  let pc=1,b=0;
+  UPGRADES.forEach(u=>{const c=upgradeCounts[u.id]||0;pc+=u.clickBonus*c;b+=u.bpsBonus*c;});
+  perClick=pc;bps=b;
+}
+
+function renderUpgrades(){
+  const panel=document.getElementById('upgradePanel');
+  // Keep player-info, bulk-bar, section title
+  const kids=[...panel.children];
+  kids.slice(3).forEach(k=>k.remove());
+  UPGRADES.forEach(u=>{
+    const cost=bulkCost(u);
+    const count=upgradeCounts[u.id]||0;
+    const canAfford=bananas>=cost;
+    const btn=document.createElement('button');
+    btn.className='upgrade-btn';
+    btn.disabled=!canAfford;
+    btn.onclick=()=>buyUpgrade(u.id);
+    const label=bulkAmount>1?`×${bulkAmount} `:' ';
+    btn.innerHTML=`<div class="ub-icon">${u.icon}</div><div class="ub-info"><div class="ub-name">${u.name}</div><div class="ub-desc">${u.desc}</div><div class="ub-cost">🍌 ${fmt(cost)} ${bulkAmount>1?'('+label+')':''}</div></div>${count>0?`<div class="ub-count">${count}</div>`:''}`;
+    panel.appendChild(btn);
+  });
+}
+
+function buyUpgrade(id){
+  const u=UPGRADES.find(x=>x.id===id);
+  const cost=bulkCost(u);
+  if(bananas<cost)return;
+  bananas-=cost;
+  upgradeCounts[u.id]=(upgradeCounts[u.id]||0)+bulkAmount;
+  recalcStats();
+  renderUpgrades();
+  updateUI();
+  showNotif(`✅ ${u.name} ×${bulkAmount} gekauft!`);
+  saveToDb();
+  checkAchievements();
+}
+
+function handleClick(e){
+  bananas+=perClick;totalBananas+=perClick;
+  const el=document.getElementById('bananaCount');
+  el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
+  const area=document.getElementById('clickArea');
+  const rect=area.getBoundingClientRect();
+  const ft=document.createElement('div');
+  ft.className='float-text';
+  ft.textContent='+'+fmt(perClick)+' 🍌';
+  ft.style.left=(e.clientX-rect.left-40)+'px';
+  ft.style.top=(e.clientY-rect.top-20)+'px';
+  area.appendChild(ft);
+  setTimeout(()=>ft.remove(),1000);
+  updateUI();renderUpgrades();checkAchievements();
+}
+
+function updateUI(){
+  document.getElementById('bananaCount').textContent=fmt(bananas)+' 🍌';
+  document.getElementById('totalDisplay').textContent=fmt(totalBananas);
+  document.getElementById('perClickDisplay').textContent=fmt(perClick);
+  document.getElementById('bpsDisplay').textContent=fmt(bps);
+  document.getElementById('bpsLine').textContent=fmt(bps)+' Bananen pro Sekunde';
+  const next=MILESTONES.find(m=>m>totalBananas)||(MILESTONES[MILESTONES.length-1]*10);
+  const prev=MILESTONES[MILESTONES.findIndex(m=>m>=next)-1]||0;
+  const pct=Math.min(100,((totalBananas-prev)/(next-prev))*100);
+  document.getElementById('mileFill').style.width=pct.toFixed(1)+'%';
+  document.getElementById('mileLabel').textContent=fmt(totalBananas)+' / '+fmt(next)+' 🍌';
+  document.getElementById('milePercent').textContent=pct.toFixed(0)+'%';
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────────
+function checkAchievements(){
+  ACHIEVEMENTS.forEach(a=>{
+    if(!earnedAchievements.has(a.id)&&a.req(totalBananas)){
+      earnedAchievements.add(a.id);
+      showAchievement(a);
+    }
+  });
+}
+function showAchievement(a){
+  document.getElementById('achieveIcon').textContent=a.icon;
+  document.getElementById('achieveName').textContent=a.name;
+  const el=document.getElementById('achievePopup');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ── GAME LOOP ─────────────────────────────────────────────────────
+function gameTick(){
+  if(!gameStarted)return;
+  const now=Date.now();
+  const dt=(now-lastTick)/1000;
+  lastTick=now;
+  if(bps>0){bananas+=bps*dt;totalBananas+=bps*dt;updateUI();}
+  requestAnimationFrame(gameTick);
+}
+
+// ── DATABASE SAVE ─────────────────────────────────────────────────
+async function saveToDb(){
+  if(!playerId)return;
+  const uc={};UPGRADES.forEach(u=>uc[u.id]=upgradeCounts[u.id]||0);
+  await db.from('players').update({
+    bananas:Math.floor(bananas),
+    total_bananas:Math.floor(totalBananas),
+    per_click:perClick,
+    bps:bps,
+    upgrade_counts:uc,
+    earned_achievements:[...earnedAchievements]
+  }).eq('id',playerId);
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────
+async function refreshLeaderboard(){
+  const {data,error}=await db.from('players').select('username,total_bananas,is_banned').eq('is_banned',false).order('total_bananas',{ascending:false}).limit(30);
+  if(error||!data)return;
+  renderLeaderboard(data);
+  const now=new Date();
+  document.getElementById('lbLastUpdate').textContent='Aktualisiert: '+now.toLocaleTimeString('de-DE');
+}
+
+function renderLeaderboard(entries){
+  const list=document.getElementById('leaderboardList');
+  list.innerHTML='';
+  if(!entries.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Noch keine Spieler</div>';return;}
+
+  // Inject current player if not present
+  const found=entries.find(e=>e.username===playerName);
+  if(!found)entries=[...entries,{username:playerName,total_bananas:Math.floor(totalBananas),is_banned:false}];
+  entries=entries.map(e=>e.username===playerName?{...e,total_bananas:Math.floor(totalBananas)}:e);
+  entries.sort((a,b)=>b.total_bananas-a.total_bananas);
+
+  const myRank=entries.findIndex(e=>e.username===playerName)+1;
+  const top=entries.slice(0,20);
+
+  top.forEach((e,i)=>{
+    const rank=i+1;
+    const isMe=e.username===playerName;
+    let rankHtml='',rankClass='';
+    if(rank===1){rankHtml='🥇';rankClass='gold';}
+    else if(rank===2){rankHtml='🥈';rankClass='silver';}
+    else if(rank===3){rankHtml='🥉';rankClass='bronze';}
+    else{rankHtml=rank;rankClass='';}
+    const div=document.createElement('div');
+    div.className='lb-entry'+(isMe?' is-me':'');
+    div.innerHTML=`<div class="lb-rank ${rankClass}">${rankHtml}</div><div class="lb-avatar">${isMe?'🐵':'🐒'}</div><div class="lb-info"><div class="lb-name">${esc(e.username)}${isMe?' (Du)':''}</div><div class="lb-bananas">${fmt(e.total_bananas)} 🍌</div></div><div class="lb-score">${fmt(e.total_bananas)}</div>`;
+    list.appendChild(div);
+  });
+
+  document.getElementById('myRankDisplay').textContent='#'+myRank;
+  document.getElementById('myRankSub').textContent='von '+entries.length+' Spielern';
+}
+
+// ── NOTIFICATION ─────────────────────────────────────────────────
+let notifTimer;
+function showNotif(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────
+function openAdminPrompt(){
+  document.getElementById('adminPinScreen').classList.remove('hidden');
+  document.getElementById('adminPinInput').value='';
+  document.getElementById('adminPinError').textContent='';
+  setTimeout(()=>document.getElementById('adminPinInput').focus(),100);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAdmin();closeAdminPin();}});
+document.getElementById('adminPinInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkAdminPin();});
+
+function checkAdminPin(){
+  const pin=document.getElementById('adminPinInput').value.trim();
+  if(pin===ADMIN_PIN){
+    document.getElementById('adminPinScreen').classList.add('hidden');
+    document.getElementById('adminScreen').classList.remove('hidden');
+    adminListPlayers();
+  } else {
+    document.getElementById('adminPinError').textContent='Falscher PIN!';
+  }
+}
+function closeAdminPin(){document.getElementById('adminPinScreen').classList.add('hidden');}
+function closeAdmin(){document.getElementById('adminScreen').classList.add('hidden');}
+
+async function adminBan(){
+  const name=document.getElementById('banUsername').value.trim();
+  const msg=document.getElementById('banMsg');
+  if(!name){msg.textContent='Bitte Namen eingeben.';return;}
+  const {error}=await db.from('players').update({is_banned:true}).eq('username',name);
+  msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' wurde gebannt.';
+  refreshLeaderboard();
+}
+async function adminUnban(){
+  const name=document.getElementById('unbanUsername').value.trim();
+  const msg=document.getElementById('unbanMsg');
+  if(!name){msg.textContent='Bitte Namen eingeben.';return;}
+  const {error}=await db.from('players').update({is_banned:false}).eq('username',name);
+  msg.textContent=error?'Fehler: '+error.message:'✅ Bann von '+name+' aufgehoben.';
+}
+async function adminGiveBananas(){
+  const name=document.getElementById('giveUsername').value.trim();
+  const amount=parseInt(document.getElementById('giveAmount').value)||0;
+  const msg=document.getElementById('giveMsg');
+  if(!name){msg.textContent='Bitte Namen eingeben.';return;}
+  const {data,error}=await db.from('players').select('bananas,total_bananas').eq('username',name).single();
+  if(error||!data){msg.textContent='Spieler nicht gefunden.';return;}
+  const {error:e2}=await db.from('players').update({bananas:data.bananas+amount,total_bananas:data.total_bananas+amount}).eq('username',name);
+  msg.textContent=e2?'Fehler: '+e2.message:'✅ '+fmt(amount)+' Bananen an '+name+' gegeben.';
+  if(name===playerName){bananas+=amount;totalBananas+=amount;updateUI();}
+}
+async function adminGiveInfinite(){
+  const msg=document.getElementById('giveMsg');
+  const big=999999999999;
+  const {error}=await db.from('players').update({bananas:big,total_bananas:big}).eq('username',playerName);
+  if(!error){bananas=big;totalBananas=big;updateUI();renderUpgrades();}
+  msg.textContent=error?'Fehler: '+error.message:'✅ Unendlich Bananen gegeben!';
+}
+async function adminRemoveFromLB(){
+  const name=document.getElementById('removeUsername').value.trim();
+  const msg=document.getElementById('removeMsg');
+  if(!name){msg.textContent='Bitte Namen eingeben.';return;}
+  const {error}=await db.from('players').update({total_bananas:0,bananas:0}).eq('username',name);
+  msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' von Rangliste entfernt.';
+  refreshLeaderboard();
+}
+async function adminReset(){
+  const name=document.getElementById('resetUsername').value.trim();
+  const msg=document.getElementById('resetMsg');
+  if(!name){msg.textContent='Bitte Namen eingeben.';return;}
+  const {error}=await db.from('players').update({bananas:0,total_bananas:0,per_click:1,bps:0,upgrade_counts:{},earned_achievements:[]}).eq('username',name);
+  msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' wurde zurückgesetzt.';
+  refreshLeaderboard();
+}
+async function adminListPlayers(){
+  const out=document.getElementById('playerListOutput');
+  out.textContent='Lädt...';
+  const {data,error}=await db.from('players').select('username,total_bananas,is_banned').order('total_bananas',{ascending:false});
+  if(error){out.textContent='Fehler: '+error.message;return;}
+  out.innerHTML=data.map((p,i)=>`<div style="padding:4px 0;border-bottom:1px solid #2a2a14;display:flex;justify-content:space-between;"><span>${i+1}. <b>${esc(p.username)}</b>${p.is_banned?' 🚫':''}</span><span style="color:var(--yellow)">${fmt(p.total_bananas)} 🍌</span></div>`).join('');
+}
+</script>
+</body>
+</html>
+HTMLEOF
