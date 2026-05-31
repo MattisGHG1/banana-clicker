@@ -685,13 +685,14 @@ function renderShop(){
     const remaining=active?Math.ceil((boost.endsAt-now)/1000):0;
     const div=document.createElement('div');
     div.className='shop-item';
-    div.innerHTML=`<div class="si-icon">${item.icon}</div><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div><div class="si-cost">🍌 ${fmt(item.cost)}</div>${active?`<div class="si-timer">⏱ ${fmtTime(remaining)} übrig</div>`:''}</div><button class="btn-buy-shop" onclick="buyBoost('${item.id}')" ${bananas<item.cost||active?'disabled':''}>Kaufen</button>`;
+    const canBuy=Math.floor(bananas)>=item.cost&&!active;
+    div.innerHTML=`<div class="si-icon">${item.icon}</div><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div><div class="si-cost">🍌 ${fmt(item.cost)}</div>${active?`<div class="si-timer">⏱ ${fmtTime(remaining)} übrig</div>`:''}</div><button class="btn-buy-shop" onclick="buyBoost('${item.id}')" ${!canBuy?'disabled':''}>Kaufen</button>`;
     container.appendChild(div);
   });
 }
 function buyBoost(id){
   const item=SHOP_ITEMS.find(x=>x.id===id);
-  if(!item||bananas<item.cost)return;
+  if(!item||Math.floor(bananas)<item.cost)return;
   bananas-=item.cost;
   activeBoosts[item.id]={name:item.name,mult:item.mult,type:item.type,endsAt:Date.now()+item.duration*1000};
   recalcStats();renderShop();updateUI();renderUpgrades();
@@ -954,17 +955,15 @@ async function adminGiveBananas(){
   const msg=document.getElementById('giveMsg');
   if(!name){msg.textContent='Bitte Namen eingeben.';return;}
   if(amount<=0){msg.textContent='Bitte gültige Menge eingeben.';return;}
-  // fetch current values
-  const {data,error}=await db.from('players').select('bananas,total_bananas,highscore').eq('username',name).single();
+  const {data,error}=await db.from('players').select('id,bananas,total_bananas,highscore').eq('username',name).single();
   if(error||!data){msg.textContent='Spieler "'+name+'" nicht gefunden.';return;}
   const newBananas=(data.bananas||0)+amount;
   const newTotal=(data.total_bananas||0)+amount;
   const newHS=Math.max(data.highscore||0,newTotal);
-  const {error:e2}=await db.from('players').update({bananas:newBananas,total_bananas:newTotal,highscore:newHS}).eq('username',name);
+  const {error:e2}=await db.from('players').update({bananas:newBananas,total_bananas:newTotal,highscore:newHS}).eq('id',data.id);
   if(e2){msg.textContent='DB Fehler: '+e2.message;return;}
   msg.textContent='✅ '+fmt(amount)+' Bananen an '+name+' gegeben.';
-  // if it's the current player, update live
-  if(name===playerName){bananas=newBananas;totalBananas=newTotal;highscore=newHS;updateUI();}
+  if(name===playerName){bananas=newBananas;totalBananas=newTotal;highscore=newHS;updateUI();renderUpgrades();}
 }
 async function adminGiveInfinite(){
   const big=999999999999;
@@ -976,7 +975,9 @@ async function adminBan(){
   const name=document.getElementById('banUsername').value.trim();
   const msg=document.getElementById('banMsg');
   if(!name){msg.textContent='Bitte Namen eingeben.';return;}
-  const {error}=await db.from('players').update({is_banned:true}).eq('username',name);
+  const {data:pd,error:pe}=await db.from('players').select('id').eq('username',name).single();
+  if(pe||!pd){msg.textContent='Spieler nicht gefunden: '+name;return;}
+  const {error}=await db.from('players').update({is_banned:true}).eq('id',pd.id);
   msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' gebannt.';
   refreshLeaderboard();
 }
@@ -984,8 +985,10 @@ async function adminUnban(){
   const name=document.getElementById('banUsername').value.trim();
   const msg=document.getElementById('banMsg');
   if(!name){msg.textContent='Bitte Namen eingeben.';return;}
-  const {error}=await db.from('players').update({is_banned:false}).eq('username',name);
-  msg.textContent=error?'Fehler: '+error.message:'✅ Bann aufgehoben.';
+  const {data:pd,error:pe}=await db.from('players').select('id').eq('username',name).single();
+  if(pe||!pd){msg.textContent='Spieler nicht gefunden: '+name;return;}
+  const {error}=await db.from('players').update({is_banned:false}).eq('id',pd.id);
+  msg.textContent=error?'Fehler: '+error.message:'✅ Bann von '+name+' aufgehoben.';
 }
 async function adminMute(){
   const name=document.getElementById('muteUsername').value.trim();
@@ -1030,7 +1033,9 @@ async function adminRemoveFromLB(){
   const name=document.getElementById('removeUsername').value.trim();
   const msg=document.getElementById('removeMsg');
   if(!name){msg.textContent='Bitte Namen eingeben.';return;}
-  const {error}=await db.from('players').update({highscore:0,total_bananas:0,bananas:0}).eq('username',name);
+  const {data:pd,error:pe}=await db.from('players').select('id').eq('username',name).single();
+  if(pe||!pd){msg.textContent='Spieler nicht gefunden: '+name;return;}
+  const {error}=await db.from('players').update({highscore:0,total_bananas:0,bananas:0}).eq('id',pd.id);
   msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' von Rangliste entfernt.';
   refreshLeaderboard();
 }
@@ -1038,8 +1043,22 @@ async function adminReset(){
   const name=document.getElementById('removeUsername').value.trim();
   const msg=document.getElementById('removeMsg');
   if(!name){msg.textContent='Bitte Namen eingeben.';return;}
-  const {error}=await db.from('players').update({bananas:0,total_bananas:0,highscore:0,per_click:1,bps:0,upgrade_counts:{},earned_achievements:[],playtime:0,rebirth_count:0,rebirth_multiplier:1}).eq('username',name);
-  msg.textContent=error?'Fehler: '+error.message:'✅ '+name+' zurückgesetzt.';
+  // fetch id first
+  const {data:pd,error:pe}=await db.from('players').select('id').eq('username',name).single();
+  if(pe||!pd){msg.textContent='Spieler nicht gefunden: '+name;return;}
+  const {error}=await db.from('players').update({
+    bananas:0,total_bananas:0,highscore:0,per_click:1,bps:0,
+    upgrade_counts:{},earned_achievements:[],playtime:0,
+    rebirth_count:0,rebirth_multiplier:1
+  }).eq('id',pd.id);
+  if(error){msg.textContent='Fehler: '+error.message;return;}
+  msg.textContent='✅ '+name+' wurde zurückgesetzt.';
+  if(name===playerName){
+    bananas=0;totalBananas=0;highscore=0;rebirthProgress=0;
+    UPGRADES.forEach(u=>upgradeCounts[u.id]=0);
+    rebirthCount=0;rebirthMultiplier=1;
+    recalcStats();renderUpgrades();updateUI();updateRebirthVisuals();
+  }
   refreshLeaderboard();
 }
 async function adminListPlayers(){
