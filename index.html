@@ -451,7 +451,7 @@ const {createClient}=supabase;
 const db=createClient(SUPA_URL,SUPA_KEY);
 
 // STATE
-let bananas=0,totalBananas=0,highscore=0,perClick=1,bps=0;
+let bananas=0,totalBananas=0,highscore=0,rebirthProgress=0,perClick=1,bps=0;
 let playerName='',playerId=null,isMuted=false;
 let rebirthCount=0,rebirthMultiplier=1;
 let upgradeCounts={};
@@ -715,7 +715,7 @@ function updateBoostBar(){
 
 // ── CLICK ─────────────────────────────────────────────────────────
 function handleClick(e){
-  bananas+=perClick;totalBananas+=perClick;
+  bananas+=perClick;totalBananas+=perClick;rebirthProgress+=perClick;
   if(totalBananas>highscore)highscore=totalBananas;
   const el=document.getElementById('bananaCount');
   el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
@@ -749,13 +749,13 @@ function updateUI(){
   document.getElementById('mileLabel').textContent=fmt(totalBananas)+' / '+fmt(next)+' 🍌';
   document.getElementById('milePercent').textContent=pct.toFixed(0)+'%';
   // Rebirth button
-  const canRebirth=highscore>=100000000;
+  const canRebirth=Math.floor(bananas)>=100000000;
   const rb=document.getElementById('rebirthBtn');
   rb.disabled=!canRebirth;
   const nextMult=rebirthMultiplier*2;
   document.getElementById('rebirthBtnSub').textContent=canRebirth
     ?`Nächster Multiplikator: ×${nextMult} (aktuell ×${rebirthMultiplier})`
-    :`Braucht 100.000.000 🍌 Highscore (aktuell: ${fmt(highscore)})`;
+    :`Braucht 100.000.000 🍌 auf dem Konto (aktuell: ${fmt(Math.floor(bananas))})`;
 }
 
 // ── REBIRTH ──────────────────────────────────────────────────────
@@ -773,7 +773,7 @@ function updateRebirthVisuals(){
   document.getElementById('playerAvatarTop').textContent=rebirthCount>=1?'🦧':'🐵';
 }
 function openRebirthModal(){
-  if(highscore<100000000)return;
+  if(Math.floor(bananas)<100000000)return;
   const nextMult=rebirthMultiplier*2;
   document.getElementById('rebirthModalText').innerHTML=`Du wirst zum <b>${rebirthCount>=1?'Orang-Utan':'Orang-Utan'}</b>!<br>Dein Multiplikator wird ×${nextMult}.<br><small style="color:var(--text3)">Rebirth #${rebirthCount+1}</small>`;
   document.getElementById('rebirthModal').classList.remove('hidden');
@@ -783,7 +783,7 @@ async function doRebirth(){
   closeRebirthModal();
   rebirthCount++;
   rebirthMultiplier*=2;
-  bananas=0;totalBananas=0;
+  bananas=0;totalBananas=0;highscore=0;rebirthProgress=0; // reset all so player must reach 100M again
   UPGRADES.forEach(u=>upgradeCounts[u.id]=0);
   activeBoosts={};
   recalcStats();renderUpgrades();renderShop();updateUI();updateRebirthVisuals();
@@ -821,6 +821,7 @@ function gameTick(){
   if(bps>0){
     const earned=bps*dt;
     bananas+=earned;totalBananas+=earned;
+    rebirthProgress+=earned;
     if(totalBananas>highscore)highscore=totalBananas;
   }
   updateUI();
