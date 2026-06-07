@@ -215,6 +215,90 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 
 @keyframes wiggle{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
 @keyframes rebirthFlash{0%{opacity:1;}50%{opacity:0;background:white;}100%{opacity:1;}}
+
+/* ── MOBILE ─────────────────────────────────────────────────── */
+@media(max-width:700px){
+  /* Verstecke Desktop-Seitenleisten */
+  .panel-left,.panel-right{display:none!important;}
+
+  /* Game-Hauptbereich: volle Breite */
+  .game-main{flex-direction:column;}
+  .panel-center{padding:12px 10px 90px;width:100%;}
+
+  /* Top-Bar kompakter */
+  .top-bar{padding:6px 8px;gap:4px;flex-wrap:wrap;}
+  .top-stat{padding:4px 7px;min-width:60px;}
+  .top-stat .ts-val{font-size:13px;}
+  .top-stat .ts-label{font-size:8px;}
+  .player-name-top{font-size:12px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* Banana-Counter größer */
+  .banana-counter{font-size:38px;}
+
+  /* Affe etwas kleiner */
+  .click-area{width:160px;height:160px;}
+  .monkey-main{font-size:110px;line-height:160px;}
+
+  /* Bottom Navigation */
+  .mobile-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:var(--panel);
+    border-top:1px solid var(--border);
+    z-index:500;
+    height:58px;
+  }
+  .mobile-nav-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:none;border:none;cursor:pointer;
+    color:var(--text3);font-size:9px;font-weight:700;gap:2px;
+    transition:color 0.15s;padding:4px 0;
+    font-family:'Nunito',sans-serif;
+  }
+  .mobile-nav-btn .mnb-icon{font-size:20px;line-height:1;}
+  .mobile-nav-btn.active{color:var(--yellow);}
+  .mobile-nav-btn:active{opacity:0.7;}
+
+  /* Mobile Panels (Upgrades, Shop, Rangliste, Chat) */
+  .mobile-panel{
+    display:none;
+    position:fixed;
+    bottom:58px;left:0;right:0;top:52px;
+    background:var(--bg);
+    z-index:400;
+    overflow-y:auto;
+    padding:10px 10px 16px;
+  }
+  .mobile-panel.active{display:block;}
+
+  /* Upgrade-Buttons im Mobile-Panel */
+  .mobile-panel .upgrade-btn{margin-bottom:5px;}
+  .mobile-panel .bulk-bar{margin-bottom:8px;}
+
+  /* Shop-Items im Mobile-Panel */
+  .mobile-panel .shop-item{margin-bottom:6px;}
+
+  /* Rebirth-Button kleiner */
+  .rebirth-btn{font-size:14px;padding:10px 16px;}
+
+  /* Milestone-Bar volle Breite */
+  .milestone-bar{max-width:100%;}
+
+  /* Achievement-Popup auf Mobile */
+  .achievement-popup{right:8px;top:62px;max-width:200px;}
+
+  /* Admin-Trigger auch auf Mobile sichtbar */
+  .admin-trigger{bottom:68px;}
+
+  /* Notif höher, damit er über Nav ist */
+  .notif{bottom:72px;}
+}
+/* Desktop: mobile-nav und mobile-panels nie anzeigen */
+@media(min-width:701px){
+  .mobile-nav{display:none;}
+  .mobile-panel{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -436,6 +520,63 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   </div>
 </div>
 
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-btn active" id="mnb-center" onclick="switchMobileTab('center')">
+    <span class="mnb-icon">🐵</span>Klicken
+  </button>
+  <button class="mobile-nav-btn" id="mnb-upgrades" onclick="switchMobileTab('upgrades')">
+    <span class="mnb-icon">⬆️</span>Upgrades
+  </button>
+  <button class="mobile-nav-btn" id="mnb-shop" onclick="switchMobileTab('shop')">
+    <span class="mnb-icon">🌿</span>Shop
+  </button>
+  <button class="mobile-nav-btn" id="mnb-leaderboard" onclick="switchMobileTab('leaderboard')">
+    <span class="mnb-icon">🏆</span>Rangliste
+  </button>
+  <button class="mobile-nav-btn" id="mnb-chat" onclick="switchMobileTab('chat')">
+    <span class="mnb-icon">💬</span>Chat
+  </button>
+</nav>
+
+<!-- MOBILE UPGRADES PANEL -->
+<div class="mobile-panel" id="mob-upgrades">
+  <div class="bulk-bar" style="margin-bottom:8px;">
+    <button class="bulk-btn active" data-bulk="1" onclick="setBulk(1)">×1</button>
+    <button class="bulk-btn" data-bulk="5" onclick="setBulk(5)">×5</button>
+    <button class="bulk-btn" data-bulk="10" onclick="setBulk(10)">×10</button>
+    <button class="bulk-btn" data-bulk="50" onclick="setBulk(50)">×50</button>
+  </div>
+  <div id="mobUpgradeList"></div>
+</div>
+
+<!-- MOBILE SHOP PANEL -->
+<div class="mobile-panel" id="mob-shop">
+  <div class="panel-section-title" style="margin-bottom:6px;">🌿 Dünger-Shop</div>
+  <div id="mobShopItems"></div>
+</div>
+
+<!-- MOBILE LEADERBOARD PANEL -->
+<div class="mobile-panel" id="mob-leaderboard">
+  <h2 style="font-family:'Fredoka One',sans-serif;font-size:17px;color:var(--yellow);margin-bottom:8px;">🏆 Rangliste</h2>
+  <div id="mobLeaderboardList"></div>
+  <div style="margin-top:8px;padding:8px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);">
+    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">Deine Position</div>
+    <div style="font-family:'Fredoka One',sans-serif;font-size:18px;color:var(--yellow);" id="myRankDisplayMob">#–</div>
+    <div style="font-size:11px;color:var(--text2);" id="myRankSubMob">–</div>
+  </div>
+</div>
+
+<!-- MOBILE CHAT PANEL -->
+<div class="mobile-panel" id="mob-chat">
+  <div id="mobChatMessages" style="display:flex;flex-direction:column;gap:4px;margin-bottom:60px;"></div>
+  <div style="position:fixed;bottom:58px;left:0;right:0;padding:8px;background:var(--panel);border-top:1px solid var(--border);display:flex;gap:6px;" id="mobChatInputArea">
+    <input type="text" class="chat-input" id="mobChatInput" placeholder="Nachricht..." maxlength="200" style="flex:1;">
+    <button class="chat-send" onclick="sendMobChat()">➤</button>
+  </div>
+  <div class="chat-muted hidden" id="mobChatMuted" style="text-align:center;padding:8px;font-size:12px;color:var(--red);">🔇 Du bist stummgeschaltet</div>
+</div>
+
 <button class="admin-trigger" id="adminTrigger" onclick="openAdminPrompt()" style="display:none;">⚙ Panel</button>
 <div class="notif" id="notif"></div>
 <div class="achievement-popup" id="achievePopup">
@@ -453,7 +594,7 @@ const db=createClient(SUPA_URL,SUPA_KEY);
 // STATE
 let bananas=0,totalBananas=0,highscore=0,rebirthProgress=0,perClick=1,bps=0;
 let playerName='',playerId=null,isMuted=false;
-let rebirthCount=0,rebirthMultiplier=1;
+let rebirthCount=0,rebirthMultiplier=1,rebirthCost=100000000;
 let upgradeCounts={};
 let earnedAchievements=new Set();
 let bulkAmount=1;
@@ -566,7 +707,7 @@ async function doLogout(){
   clearInterval(chatInterval);clearInterval(lbInterval);
   bananas=0;totalBananas=0;highscore=0;perClick=1;bps=0;
   playerName='';playerId=null;sessionPlaytime=0;savedPlaytime=0;
-  rebirthCount=0;rebirthMultiplier=1;activeBoosts={};isMuted=false;
+  rebirthCount=0;rebirthMultiplier=1;rebirthCost=100000000;activeBoosts={};isMuted=false;
   UPGRADES.forEach(u=>upgradeCounts[u.id]=0);
   earnedAchievements=new Set();
   document.getElementById('gameScreen').classList.add('hidden');
@@ -581,6 +722,7 @@ function loadPlayerData(d){
   perClick=d.per_click||1;bps=d.bps||0;
   savedPlaytime=d.playtime||0;sessionPlaytime=0;
   rebirthCount=d.rebirth_count||0;rebirthMultiplier=d.rebirth_multiplier||1;
+  rebirthCost=d.rebirth_cost||100000000;
   isMuted=d.is_muted||false;
   const uc=d.upgrade_counts||{};
   UPGRADES.forEach(u=>upgradeCounts[u.id]=uc[u.id]||0);
@@ -607,6 +749,96 @@ function showGame(){
   chatInterval=setInterval(loadChat,4000);
   setInterval(saveToDb,15000);
 }
+
+// ── MOBILE NAV ───────────────────────────────────────────────────
+let currentMobileTab='center';
+function switchMobileTab(tab){
+  currentMobileTab=tab;
+  // Nav-Buttons
+  document.querySelectorAll('.mobile-nav-btn').forEach(b=>{
+    b.classList.toggle('active',b.id==='mnb-'+tab);
+  });
+  // Mobile Panels
+  document.querySelectorAll('.mobile-panel').forEach(p=>{
+    p.classList.toggle('active',p.id==='mob-'+tab);
+  });
+  // Center (Klick-Bereich) ist immer sichtbar, andere Panels überlagern ihn
+  if(tab==='upgrades')renderMobUpgrades();
+  if(tab==='shop')renderMobShop();
+  if(tab==='leaderboard')renderMobLeaderboard();
+  if(tab==='chat')renderMobChat();
+}
+function renderMobUpgrades(){
+  const container=document.getElementById('mobUpgradeList');
+  if(!container)return;
+  container.innerHTML='';
+  UPGRADES.forEach(u=>{
+    const cost=bulkCost(u);
+    const count=upgradeCounts[u.id]||0;
+    const btn=document.createElement('button');
+    btn.className='upgrade-btn';
+    btn.disabled=bananas<cost;
+    btn.onclick=()=>buyUpgrade(u.id);
+    btn.innerHTML=`<div class="ub-icon">${u.icon}</div><div class="ub-info"><div class="ub-name">${u.name}</div><div class="ub-desc">${u.desc}</div><div class="ub-cost">🍌 ${fmt(cost)}${bulkAmount>1?' (×'+bulkAmount+')':''}</div></div>${count>0?`<div class="ub-count">${count}</div>`:''}`;
+    container.appendChild(btn);
+  });
+}
+function renderMobShop(){
+  const container=document.getElementById('mobShopItems');
+  if(!container)return;
+  container.innerHTML='';
+  const now=Date.now();
+  SHOP_ITEMS.forEach(item=>{
+    const boost=activeBoosts[item.id];
+    const active=boost&&boost.endsAt>now;
+    const remaining=active?Math.ceil((boost.endsAt-now)/1000):0;
+    const div=document.createElement('div');
+    div.className='shop-item';
+    const canBuy=Math.floor(bananas)>=item.cost;
+    div.innerHTML=`<div class="si-icon">${item.icon}</div><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div><div class="si-cost">🍌 ${fmt(item.cost)}</div>${active?`<div class="si-timer">⏱ ${fmtTime(remaining)} übrig</div>`:''}</div><button class="btn-buy-shop" onclick="buyBoost('${item.id}')" ${!canBuy?'disabled':''}>Kaufen</button>`;
+    container.appendChild(div);
+  });
+}
+function renderMobLeaderboard(){
+  // Wiederverwendung der Desktop-Daten
+  const desktopList=document.getElementById('leaderboardList');
+  const mobList=document.getElementById('mobLeaderboardList');
+  if(mobList&&desktopList)mobList.innerHTML=desktopList.innerHTML;
+  const r1=document.getElementById('myRankDisplay');
+  const r2=document.getElementById('myRankDisplayMob');
+  const s1=document.getElementById('myRankSub');
+  const s2=document.getElementById('myRankSubMob');
+  if(r1&&r2)r2.textContent=r1.textContent;
+  if(s1&&s2)s2.textContent=s1.textContent;
+}
+function renderMobChat(){
+  const desktop=document.getElementById('chatMessages');
+  const mob=document.getElementById('mobChatMessages');
+  if(mob&&desktop)mob.innerHTML=desktop.innerHTML;
+  const muteEl=document.getElementById('mobChatMuted');
+  const inputArea=document.getElementById('mobChatInputArea');
+  if(isMuted){
+    if(muteEl)muteEl.classList.remove('hidden');
+    if(inputArea)inputArea.style.display='none';
+  }else{
+    if(muteEl)muteEl.classList.add('hidden');
+    if(inputArea)inputArea.style.display='flex';
+  }
+}
+async function sendMobChat(){
+  if(isMuted)return;
+  const input=document.getElementById('mobChatInput');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  await db.from('chat_messages').insert({username:playerName,message:msg,is_admin:false});
+  await loadChat();
+  renderMobChat();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const mobInput=document.getElementById('mobChatInput');
+  if(mobInput)mobInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendMobChat();});
+});
 
 // ── TABS ─────────────────────────────────────────────────────────
 function switchTab(tab){
@@ -669,7 +901,7 @@ function buyUpgrade(id){
   if(bananas<cost)return;
   bananas-=cost;
   upgradeCounts[u.id]=(upgradeCounts[u.id]||0)+bulkAmount;
-  recalcStats();renderUpgrades();updateUI();
+  recalcStats();renderUpgrades();renderMobUpgrades();updateUI();
   showNotif(`✅ ${u.name} ×${bulkAmount} gekauft!`);
   saveToDb();checkAchievements();
 }
@@ -685,7 +917,7 @@ function renderShop(){
     const remaining=active?Math.ceil((boost.endsAt-now)/1000):0;
     const div=document.createElement('div');
     div.className='shop-item';
-    const canBuy=Math.floor(bananas)>=item.cost&&!active;
+    const canBuy=Math.floor(bananas)>=item.cost;
     div.innerHTML=`<div class="si-icon">${item.icon}</div><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div><div class="si-cost">🍌 ${fmt(item.cost)}</div>${active?`<div class="si-timer">⏱ ${fmtTime(remaining)} übrig</div>`:''}</div><button class="btn-buy-shop" onclick="buyBoost('${item.id}')" ${!canBuy?'disabled':''}>Kaufen</button>`;
     container.appendChild(div);
   });
@@ -694,8 +926,12 @@ function buyBoost(id){
   const item=SHOP_ITEMS.find(x=>x.id===id);
   if(!item||Math.floor(bananas)<item.cost)return;
   bananas-=item.cost;
-  activeBoosts[item.id]={name:item.name,mult:item.mult,type:item.type,endsAt:Date.now()+item.duration*1000};
-  recalcStats();renderShop();updateUI();renderUpgrades();
+  const now=Date.now();
+  const existing=activeBoosts[item.id];
+  // Zeit addieren wenn Boost bereits aktiv, sonst neu starten
+  const baseTime=(existing&&existing.endsAt>now)?existing.endsAt:now;
+  activeBoosts[item.id]={name:item.name,mult:item.mult,type:item.type,endsAt:baseTime+item.duration*1000};
+  recalcStats();renderShop();renderMobShop();updateUI();renderUpgrades();renderMobUpgrades();
   showNotif(`⚡ ${item.name} aktiv!`);
   updateBoostBar();
 }
@@ -750,33 +986,33 @@ function updateUI(){
   document.getElementById('mileLabel').textContent=fmt(totalBananas)+' / '+fmt(next)+' 🍌';
   document.getElementById('milePercent').textContent=pct.toFixed(0)+'%';
   // Rebirth button
-  const canRebirth=Math.floor(bananas)>=100000000;
+  const canRebirth=Math.floor(bananas)>=rebirthCost;
   const rb=document.getElementById('rebirthBtn');
   rb.disabled=!canRebirth;
   const nextMult=rebirthMultiplier*2;
   document.getElementById('rebirthBtnSub').textContent=canRebirth
     ?`Nächster Multiplikator: ×${nextMult} (aktuell ×${rebirthMultiplier})`
-    :`Braucht 100.000.000 🍌 auf dem Konto (aktuell: ${fmt(Math.floor(bananas))})`;
+    :`Braucht ${fmt(rebirthCost)} 🍌 auf dem Konto (aktuell: ${fmt(Math.floor(bananas))})`;
 }
 
 // ── REBIRTH ──────────────────────────────────────────────────────
 function updateRebirthVisuals(){
   const badge=document.getElementById('rebirthBadge');
   const emoji=document.getElementById('monkeyEmoji');
+  // Badge neben dem Namen immer ausblenden
+  badge.style.display='none';
   if(rebirthCount>=1){
-    badge.style.display='inline';
-    badge.textContent='R'+rebirthCount;
     emoji.textContent='🦧';
   } else {
-    badge.style.display='none';
     emoji.textContent='🐵';
   }
   document.getElementById('playerAvatarTop').textContent=rebirthCount>=1?'🦧':'🐵';
 }
 function openRebirthModal(){
-  if(Math.floor(bananas)<100000000)return;
+  if(Math.floor(bananas)<rebirthCost)return;
   const nextMult=rebirthMultiplier*2;
-  document.getElementById('rebirthModalText').innerHTML=`Du wirst zum <b>${rebirthCount>=1?'Orang-Utan':'Orang-Utan'}</b>!<br>Dein Multiplikator wird ×${nextMult}.<br><small style="color:var(--text3)">Rebirth #${rebirthCount+1}</small>`;
+  const nextCost=rebirthCost*2;
+  document.getElementById('rebirthModalText').innerHTML=`Du wirst zum <b>Orang-Utan</b>!<br>Dein Multiplikator wird ×${nextMult}.<br><small style="color:var(--text3)">Rebirth #${rebirthCount+1} · Nächste Wiedergeburt kostet ${fmt(nextCost)} 🍌</small>`;
   document.getElementById('rebirthModal').classList.remove('hidden');
 }
 function closeRebirthModal(){document.getElementById('rebirthModal').classList.add('hidden');}
@@ -784,7 +1020,8 @@ async function doRebirth(){
   closeRebirthModal();
   rebirthCount++;
   rebirthMultiplier*=2;
-  bananas=0;totalBananas=0;highscore=0;rebirthProgress=0; // reset all so player must reach 100M again
+  rebirthCost*=2;  // Preis verdoppelt sich jedes Mal
+  bananas=0;totalBananas=0;highscore=0;rebirthProgress=0;
   UPGRADES.forEach(u=>upgradeCounts[u.id]=0);
   activeBoosts={};
   recalcStats();renderUpgrades();renderShop();updateUI();updateRebirthVisuals();
@@ -844,7 +1081,8 @@ async function saveToDb(){
     earned_achievements:[...earnedAchievements],
     playtime:totalPT,
     rebirth_count:rebirthCount,
-    rebirth_multiplier:rebirthMultiplier
+    rebirth_multiplier:rebirthMultiplier,
+    rebirth_cost:rebirthCost
   }).eq('id',playerId);
   if(!error){savedPlaytime=totalPT;sessionPlaytime=0;}
 }
@@ -859,6 +1097,7 @@ async function refreshLeaderboard(){
   if(error||!data)return;
   renderLeaderboard(data);
   document.getElementById('lbLastUpdate').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-DE');
+  if(currentMobileTab==='leaderboard')renderMobLeaderboard();
 }
 function renderLeaderboard(entries){
   const list=document.getElementById('leaderboardList');
@@ -904,6 +1143,7 @@ async function loadChat(){
     container.appendChild(div);
   });
   if(atBottom)container.scrollTop=container.scrollHeight;
+  if(currentMobileTab==='chat')renderMobChat();
   // muted check
   const muteEl=document.getElementById('chatMuted');
   const inputArea=document.getElementById('chatInputArea');
